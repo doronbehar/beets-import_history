@@ -24,8 +24,9 @@ class LibmanDatabase:
         self.connection = sqlite3.connect(db_path)
         self.cursor = self.connection.cursor()
         self.ex = self.cursor.execute
-        self.ex('SELECT * FROM imports_history')
-        if not self.cursor.fetchall():
+        try:
+            self.ex('SELECT * FROM imports_history')
+        except sqlite3.OperationalError:
             self.ex('CREATE TABLE imports_history ('
                     'dir_path text'
                     'album_path text'
