@@ -126,6 +126,10 @@ class LibmanPlugin(BeetsPlugin):
         print(source)
         print(destination)
 
+    def _get_album(self, lib, suggestion=""):
+        # TODO: launch fzf with suggestion in the initial --query
+        return suggestion
+
     def main(self, lib, opts, args):
         """Command line interface function."""
         if opts.list:
@@ -136,14 +140,71 @@ class LibmanPlugin(BeetsPlugin):
             print(self.database.list())
             return 0
         return self.simulate(lib, opts, args)
+
+    def _handle_album_opt(self, lib, album):
+        """Handle --album= as either mb_albumid or path (relative/absolute)."""
+        album = pathlib.Path(album)
+        if album.exists():
+            musicdir = pathlib.Path(str(config['directory']))
+            if album.is_absolute():
+                self._log.info("treating %s as a directory in the music "
+                               "library" % album)
+                if not musicdir.match(str(album)):
+                    self._log.error("%s wasn't found in music library" % album)
+                    sys.exit(1)
+            else:
+                album = musicdir.joinpath(album)
+            # FIXME: why does it return an empty list??
+            library_matching_albums = lib.albums(
+                query="path:%s" % str(album)
+            )
+            if not library_matching_albums:
+                self._log.error("'%s' wasn't found in the library although it "
+                                "seems to exist in the music directory" %
+                                album)
+                sys.exit(1)
+            #album = library_matching_albums.albumid
+        else:
+            album = str(album)
+            self._log.info("treating %s as a musicbrainz-albumid" % album)
+            library_matching_albums = lib.albums(
+                query="mb_albumid:%s" % album
+            )
+            # FIXME: why does it return an empty list??
+            if not library_matching_albums:
+                self._log.error("'%s' wasn't found in the library" % album)
+                sys.exit(1)
+            #album = library_matching_albums.albumid
+        return album
+
     def simulate(self, lib, opts, args):
         """Simulate an import for given arguments."""
-        self._log.info("simulating import of %s", args[0])
-        # TODO: prompt the user or use fzf to get a corresponding album in case
-        # it was not provided in args.album
-        print(lib)
-        print(opts)
-        print(args)
+        if len(args) > 1:
+            self._log.warning("warning: only 1st argument will be processed")
+        self._log.info("simulating import of %s" % args[0])
+        arg = pathlib.Path(args[0])
+        if not arg.is_dir():
+            self._log.error("%s is not a directory, aborting" % arg)
+            sys.exit(1)
+        arg = arg.resolve()
+        # NOW `arg` must be an absolute path
+        if not opts.album:
+            try:
+                album = self._get_album(lib, suggestion=arg)
+            except FileNotFoundError:
+                self._log.warn("fzf was not found in your $PATH and "
+                               "--album was not specified for per this "
+                               "argument so it will be skipped")
+                sys.exit(1)
+            self._log.info("treating %s as a musicbrainz album id" % album)
+        else:
+            album = self._handle_album_opt(lib, album)
+        # NOW album must be an album's musicbrainz id
+        if self.database.search_import(arg):
+            print("%s seems to be already marked in history" % arg)
+            return 0
+        self.database.insert_album(arg, album)
+        return 0
 
     def optimize(self, lib, opts, args):
         """Optimize downloads directory / music library / playlists."""
