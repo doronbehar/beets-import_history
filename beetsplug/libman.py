@@ -102,7 +102,10 @@ class LibmanPlugin(BeetsPlugin):
         libman.parser.add_option('--album', '-a',
                                  help='musicbrainz-albumid or album-path that '
                                  'will be used in the database')
-        libman.func = self.simulate
+        libman.parser.add_option('--list', '-l', action='store_true',
+                                 help='list imports from the past with the '
+                                 'corresponding paths')
+        libman.func = self.main
         return [libman, optimize]
 
     def mark_torrent_dir(self, lib, paths):
@@ -123,6 +126,16 @@ class LibmanPlugin(BeetsPlugin):
         print(source)
         print(destination)
 
+    def main(self, lib, opts, args):
+        """Command line interface function."""
+        if opts.list:
+            if not hasattr(self, 'database'):
+                self._log.error("Can't read imports history for listing")
+                sys.exit(1)
+            self._log.info("listing all past imports")
+            print(self.database.list())
+            return 0
+        return self.simulate(lib, opts, args)
     def simulate(self, lib, opts, args):
         """Simulate an import for given arguments."""
         self._log.info("simulating import of %s", args[0])
