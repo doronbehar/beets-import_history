@@ -58,7 +58,7 @@ class LibmanPlugin(BeetsPlugin):
     """Main plugin class."""
 
     def __init__(self):
-        """Initialize the plugin and reading configuration."""
+        """Initialize the plugin and read configuration."""
         super(LibmanPlugin, self).__init__()
         self.config.add({
             'auto': True,
@@ -87,6 +87,7 @@ class LibmanPlugin(BeetsPlugin):
                 'auto': False
             })
         if self.config['auto'] and hasattr(self, 'database'):
+            # TODO: register deletion events as well
             self.register_listener('import', self.mark_torrent_dir)
             self.register_listener('item_moved', self.handle_moved_files)
 
