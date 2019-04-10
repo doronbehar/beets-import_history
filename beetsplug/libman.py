@@ -9,6 +9,8 @@ This plugin does several jobs:
 
 # from glob import iglob, glob
 import sqlite3
+import pathlib
+import sys
 
 from beets.plugins import BeetsPlugin
 from beets.ui import Subcommand
@@ -19,8 +21,9 @@ from beets import util
 class LibmanDatabase:
     """Database abstraction layer class."""
 
-    def __init__(self, db_path):
+    def __init__(self, db_path, logger):
         """Initialize database within self."""
+        self._log = logger
         self.connection = sqlite3.connect(db_path)
         self.cursor = self.connection.cursor()
         self.ex = self.cursor.execute
@@ -66,7 +69,8 @@ class LibmanPlugin(BeetsPlugin):
                               "hooks will be used")
         self._log.debug("database: {}", self.config['database'])
         try:
-            self.database = LibmanDatabase(str(self.config['database']))
+            self.database = LibmanDatabase(str(self.config['database']),
+                                           self._log)
         except sqlite3.OperationalError:
             self._log.error("Could not open/create database file")
             self.config.set({
