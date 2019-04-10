@@ -31,17 +31,27 @@ class LibmanDatabase:
             self.ex('SELECT * FROM imports_history')
         except sqlite3.OperationalError:
             self.ex('CREATE TABLE imports_history ('
-                    'dir_path text'
-                    'album_path text'
+                    'origin_path text'
+                    'mb_albumid text'
                     ')')
 
-    def insert_album(self, dir_path, album_path):
+    def insert_album(self, origin_path, mb_albumid):
         """Insert an album to the db according to parameters of function."""
-        self.ex('INSERT INTO imports_history values (?, ?)', dir_path,
-                album_path)
+        self.ex('INSERT INTO imports_history values (?, ?)', origin_path,
+                mb_albumid)
+        return self.cursor.fetchall()
 
-    def search_album(self, album_path, album_id):
-        """Search for an album according to either album_path or album_id."""
+    def search_import(self, origin_path):
+        """Search for an album according to either mb_albumid or mb_albumid."""
+        self.ex('SELECT * FROM imports_history WHERE origin_path=?',
+                origin_path)
+        return self.cursor.fetchall()
+
+    def list(self):
+        """List all entries in the database."""
+        self.ex('SELECT * FROM imports_history')
+        imports = self.cursor.fetchall()
+        return imports
 
 
 class LibmanPlugin(BeetsPlugin):
